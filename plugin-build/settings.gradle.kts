@@ -6,6 +6,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = ("com.ncorti.kotlin.gradle.template")
+rootProject.name = ("ir.amv.enterprise.locorepo.client.gradle")
 
 include(":plugin")

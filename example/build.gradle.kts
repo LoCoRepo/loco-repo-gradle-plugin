@@ -1,6 +1,6 @@
 plugins {
     java
-    id("com.ncorti.kotlin.gradle.template.plugin")
+    id("ir.amv.enterprise.locorepo.client.gradle.plugin")
 }
 
 templateExampleConfig {

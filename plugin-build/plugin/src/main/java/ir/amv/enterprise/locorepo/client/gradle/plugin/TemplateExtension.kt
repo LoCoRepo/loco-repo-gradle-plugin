@@ -1,6 +1,7 @@
-package com.ncorti.kotlin.gradle.template.plugin
+package ir.amv.enterprise.locorepo.client.gradle.plugin
 
 import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import javax.inject.Inject
@@ -22,5 +23,9 @@ abstract class TemplateExtension @Inject constructor(project: Project) {
     // Example of a property with a default set with .convention
     val outputFile: RegularFileProperty = objects.fileProperty().convention(
         project.layout.buildDirectory.file(DEFAULT_OUTPUT_FILE)
+    )
+
+    val modelsDir: DirectoryProperty = objects.directoryProperty().convention(
+        project.layout.projectDirectory.dir("src/main/mps")
     )
 }
