@@ -17,8 +17,9 @@ abstract class LoCoRepoPlugin : Plugin<Project> {
             it.archiveFileName.set("loco-model.zip")
             it.destinationDirectory.set(layout.buildDirectory.dir("loco-repo"))
             it
-                .from(extension.modelsDir)
-                .eachFile { logger.lifecycle("MF file $it") }
+                .from(layout.projectDirectory)
+                .include(".mps/**/*.*")
+                .include("src/main/mps/**/*.*")
         }
 
         // Add a task that uses configuration from the extension object

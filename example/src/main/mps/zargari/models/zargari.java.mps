@@ -3,6 +3,7 @@
   <persistence version="9" />
   <languages>
     <use id="7024827d-169d-4b4c-9fcb-bfd9251096f9" name="ir.amv.laas.samples.zargari.lang" version="0" />
+    <use id="fdcdc48f-bfd8-4831-aa76-5abac2ffa010" name="jetbrains.mps.baseLanguage.jdk8" version="2" />
   </languages>
   <imports />
   <registry>

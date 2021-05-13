@@ -1,3 +1,6 @@
+import org.gradle.kotlin.dsl.support.compileKotlinScriptModuleTo
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinWithJavaTarget
+
 plugins {
     kotlin("jvm")
     id("java-gradle-plugin")
@@ -5,8 +8,15 @@ plugins {
 }
 
 dependencies {
+    implementation(platform("com.google.cloud:libraries-bom:20.5.0"))
     implementation(kotlin("stdlib-jdk7"))
     implementation(gradleApi())
+    implementation("org.apache.httpcomponents.client5:httpclient5:5.1")
+    implementation("com.google.auth:google-auth-library-oauth2-http:0.25.5")
+    implementation("com.google.oauth-client:google-oauth-client:1.31.5")
+    implementation("com.google.oauth-client:google-oauth-client-jetty:1.31.5")
+    implementation("com.google.cloud:google-cloud-storage")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.3")
 
     testImplementation(TestingLib.JUNIT)
 }
