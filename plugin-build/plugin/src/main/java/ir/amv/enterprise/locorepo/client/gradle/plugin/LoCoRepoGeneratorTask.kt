@@ -1,7 +1,6 @@
 package ir.amv.enterprise.locorepo.client.gradle.plugin
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
@@ -20,8 +19,8 @@ abstract class LoCoRepoGeneratorTask : DefaultTask() {
     @get:Option(option = "message", description = "A message to be printed in the output file")
     abstract val message: Property<String>
 
-    @get:InputDirectory
-    abstract val modelsDir: DirectoryProperty
+    @get:InputFile
+    abstract val modelsZip: RegularFileProperty
 
     @get:Input
     @get:Option(option = "tag", description = "A Tag to be used for debug and in the output file")
@@ -33,7 +32,6 @@ abstract class LoCoRepoGeneratorTask : DefaultTask() {
 
     @TaskAction
     fun sampleAction() {
-        modelsDir.asFileTree.forEach { logger.lifecycle("hey a file! $it") }
         val prettyTag = tag.orNull?.let { "[$it]" } ?: ""
 
         logger.lifecycle("$prettyTag message is: ${message.orNull}")
