@@ -2,6 +2,7 @@ package ir.amv.enterprise.locorepo.client.gradle.plugin
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Zip
 
 const val EXTENSION_NAME = "templateExampleConfig"
@@ -13,22 +14,30 @@ abstract class LoCoRepoPlugin : Plugin<Project> {
         val extension = extensions.create(EXTENSION_NAME, TemplateExtension::class.java, this)
 
         // Zip loco models
+        val locoRepoDir = layout.buildDirectory.dir("loco-repo")
         val zipTask = tasks.register("ZipLoCoModels", Zip::class.java) {
             it.archiveFileName.set("loco-model.zip")
-            it.destinationDirectory.set(layout.buildDirectory.dir("loco-repo"))
+            it.destinationDirectory.set(locoRepoDir)
             it
                 .from(layout.projectDirectory)
                 .include(".mps/**/*.*")
                 .include("src/main/mps/**/*.*")
         }
 
+        configurations.create("loco")
+
         // Add a task that uses configuration from the extension object
-        tasks.register(TASK_NAME, LoCoRepoGeneratorTask::class.java) {
-            it.dependsOn(zipTask)
-            it.tag.set(extension.tag)
-            it.message.set(extension.message)
-            it.outputFile.set(extension.outputFile)
-            it.modelsZip.set(layout.buildDirectory.file("loco-repo/loco-model.zip"))
+        val gen = tasks.register(TASK_NAME, LoCoRepoGeneratorTask::class.java) { genTask ->
+            genTask.dependsOn(zipTask)
+            genTask.tag.set(extension.tag)
+            genTask.message.set(extension.message)
+            genTask.outputFile.set(extension.outputFile)
+            genTask.modelsZip.set(locoRepoDir.map { it.file("loco-model.zip") })
+        }
+        tasks.register("generate", Copy::class.java) { copy ->
+            copy.dependsOn(gen)
+            copy.from(zipTree(extension.outputFile))
+            copy.into(locoRepoDir.map { it.dir("generated") })
         }
         Unit
     }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import ir.amv.enterprise.locorepo.client.gradle.plugin.AuthenticationService
 import org.apache.hc.client5.http.async.methods.AbstractCharResponseConsumer
+import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.protocol.HttpClientContext
 import org.apache.hc.core5.http.*
@@ -32,12 +33,14 @@ import java.util.concurrent.TimeUnit
 class LoCoGeneratorCommand private constructor(builder: Builder) {
 
     private val modelsZip: Path
+    private val outputZip: Path
     private val logger: StyledTextOutput?
     private val objectMapper = jacksonObjectMapper()
     private val genEventRespConsumer: AbstractCharResponseConsumer<List<ModelGenerationEvent>>
 
     init {
         this.modelsZip = builder.modelsZip
+        this.outputZip = builder.outputZip
         this.logger = builder.logger
         genEventRespConsumer = object : AbstractCharResponseConsumer<List<ModelGenerationEvent>>() {
             val events = mutableListOf<ModelGenerationEvent>()
@@ -77,10 +80,8 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 }
             }
 
-            override fun start(response: HttpResponse?, contentType: ContentType?) {
-                if (response!!.code != 200) {
-                    throw BuildCancelledException("Unsuccessful http response for Code Generation: $response. Content-type: $contentType")
-                }
+            override fun start(response: HttpResponse, contentType: ContentType?) {
+                response.ensureSuccess()
             }
 
             override fun buildResult(): List<ModelGenerationEvent> {
@@ -90,7 +91,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
         }
     }
 
-    fun execute(): UUID =
+    fun execute() =
         HttpAsyncClients.createDefault().use { client ->
             client.start()
             val token = AuthenticationService.authentication
@@ -109,25 +110,13 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                     request,
                     FileEntityProducer(modelsZip.toFile())
                 )
-            var events = client.execute(
+            val events = client.execute(
                 reqProducer,
                 genEventRespConsumer,
                 null
             ).get()
             val id = events.first().generatedFileName
-            while (!events.any { it.type == ModelGenerationEvent.ModelGenerationEventType.GENERATION_FINISHED }) {
-                val get: BasicHttpRequest = BasicRequestBuilder
-                    .get("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/logs?generatedFileName=$id")
-                    .also {
-                        it.addHeader("Authorization", "Bearer $token")
-                    }.build()
-                val requestProducer = BasicRequestProducer(get, null)
-                events = client.execute(
-                    requestProducer,
-                    genEventRespConsumer,
-                    null
-                ).get()
-            }
+            retryUntilFinishEventReceived(events, id, token, client)
 
             val get: BasicHttpRequest = BasicRequestBuilder
                 .get("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/$id")
@@ -141,9 +130,11 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 BasicResponseConsumer(BasicAsyncEntityConsumer()),
                 HttpClientContext.create(),
                 null
-            ).get().body.inputStream().use { input ->
-                val resultZip = modelsZip.parent.resolve("$id.zip")
-                Files.newOutputStream(resultZip).use { output ->
+            ).get().let {
+                it.head.ensureSuccess()
+                it.body
+            }.inputStream().use { input ->
+                Files.newOutputStream(outputZip).use { output ->
                     input.copyTo(output)
                 }
             }
@@ -157,9 +148,33 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 BasicResponseConsumer(BasicAsyncEntityConsumer()),
                 HttpClientContext.create(),
                 null
-            )
-            id
+            ).get()
         }
+
+    private fun retryUntilFinishEventReceived(
+        events: List<ModelGenerationEvent>,
+        id: UUID,
+        token: String?,
+        client: CloseableHttpAsyncClient
+    ) {
+        var events1 = events
+        while (
+            events1.isNotEmpty() &&
+            !events1.any { it.type == ModelGenerationEvent.ModelGenerationEventType.GENERATION_FINISHED }
+        ) {
+            val get: BasicHttpRequest = BasicRequestBuilder
+                .get("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/logs?generatedFileName=$id")
+                .also {
+                    it.addHeader("Authorization", "Bearer $token")
+                }.build()
+            val requestProducer = BasicRequestProducer(get, null)
+            events1 = client.execute(
+                requestProducer,
+                genEventRespConsumer,
+                null
+            ).get()
+        }
+    }
 
     private fun startIOReactor() {
         val ioReactorConfig = IOReactorConfig.custom()
@@ -202,11 +217,20 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
 
     class Builder {
         lateinit var modelsZip: Path
+        lateinit var outputZip: Path
         var logger: StyledTextOutput? = null
 
         fun modelsZip(modelsZip: Path) = apply { this.modelsZip = modelsZip }
         fun logger(logger: StyledTextOutput?) = apply { this.logger = logger }
 
         fun build() = LoCoGeneratorCommand(this)
+        fun outputFile(outputZip: Path) = apply { this.outputZip = outputZip }
     }
 }
+
+private fun HttpResponse.ensureSuccess() {
+    if (code < 200 || code >= 300) {
+        throw BuildCancelledException("Unsuccessful http response for Code Generation: $this")
+    }
+}
+

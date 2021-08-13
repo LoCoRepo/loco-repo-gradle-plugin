@@ -6,7 +6,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import javax.inject.Inject
 
-const val DEFAULT_OUTPUT_FILE = "template-example.txt"
+const val DEFAULT_OUTPUT_FILE = "loco-repo/generated.zip"
 
 @Suppress("UnnecessaryAbstractClass")
 abstract class TemplateExtension @Inject constructor(project: Project) {
