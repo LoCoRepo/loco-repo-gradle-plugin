@@ -24,13 +24,9 @@ abstract class LoCoRepoPlugin : Plugin<Project> {
                 .include("src/main/mps/**/*.*")
         }
 
-        configurations.create("loco")
-
         // Add a task that uses configuration from the extension object
         val gen = tasks.register(TASK_NAME, LoCoRepoGeneratorTask::class.java) { genTask ->
             genTask.dependsOn(zipTask)
-            genTask.tag.set(extension.tag)
-            genTask.message.set(extension.message)
             genTask.outputFile.set(extension.outputFile)
             genTask.modelsZip.set(locoRepoDir.map { it.file("loco-model.zip") })
         }

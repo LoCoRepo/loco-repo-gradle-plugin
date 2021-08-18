@@ -1,7 +1,5 @@
 package ir.amv.enterprise.locorepo.client.gradle.plugin
 
-import ir.amv.enterprise.locorepo.client.gradle.plugin.LoCoRepoGeneratorTask
-import ir.amv.enterprise.locorepo.client.gradle.plugin.TemplateExtension
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -32,15 +30,11 @@ class LoCoRepoPluginTest {
         project.pluginManager.apply("ir.amv.enterprise.locorepo.client.gradle.plugin")
         val aFile = File(project.projectDir, ".tmp")
         (project.extensions.getByName("templateExampleConfig") as TemplateExtension).apply {
-            tag.set("a-sample-tag")
-            message.set("just-a-message")
             outputFile.set(aFile)
         }
 
         val task = project.tasks.getByName("templateExample") as LoCoRepoGeneratorTask
 
-        assertEquals("a-sample-tag", task.tag.get())
-        assertEquals("just-a-message", task.message.get())
         assertEquals(aFile, task.outputFile.get().asFile)
     }
 }

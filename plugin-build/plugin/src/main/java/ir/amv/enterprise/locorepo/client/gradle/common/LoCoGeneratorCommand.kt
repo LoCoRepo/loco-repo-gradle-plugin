@@ -36,58 +36,60 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
     private val outputZip: Path
     private val logger: StyledTextOutput?
     private val objectMapper = jacksonObjectMapper()
-    private val genEventRespConsumer: AbstractCharResponseConsumer<List<ModelGenerationEvent>>
+    private val genEventRespConsumerFactory: () -> AbstractCharResponseConsumer<List<ModelGenerationEvent>>
 
     init {
         this.modelsZip = builder.modelsZip
         this.outputZip = builder.outputZip
         this.logger = builder.logger
-        genEventRespConsumer = object : AbstractCharResponseConsumer<List<ModelGenerationEvent>>() {
-            val events = mutableListOf<ModelGenerationEvent>()
-            val strBuffer = StringBuffer()
+        genEventRespConsumerFactory = {
+            object : AbstractCharResponseConsumer<List<ModelGenerationEvent>>() {
+                val events = mutableListOf<ModelGenerationEvent>()
+                val strBuffer = StringBuffer()
 
-            override fun releaseResources() {
-                logger
-                    ?.withStyle(StyledTextOutput.Style.ProgressStatus)
-                    ?.println("Releasing SSE connection to server")
-            }
+                override fun releaseResources() {
+                    logger
+                        ?.withStyle(StyledTextOutput.Style.ProgressStatus)
+                        ?.println("Releasing SSE connection to server")
+                }
 
-            override fun capacityIncrement(): Int = Integer.MAX_VALUE
+                override fun capacityIncrement(): Int = Integer.MAX_VALUE
 
-            override fun data(src: CharBuffer, endOfStream: Boolean) {
-                while (src.hasRemaining()) {
-                    strBuffer.append(src.get())
-                    if (strBuffer.indexOf('0') > 0 &&
-                        strBuffer.count { it == '{' } == strBuffer.count { it == '}' }
-                    ) {
-                        strBuffer
-                            .toString()
+                override fun data(src: CharBuffer, endOfStream: Boolean) {
+                    while (src.hasRemaining()) {
+                        strBuffer.append(src.get())
+                        if (strBuffer.indexOf('0') > 0 &&
+                            strBuffer.count { it == '{' } == strBuffer.count { it == '}' }
+                        ) {
+                            strBuffer
+                                .toString()
 //                            .also { logger?.withStyle(StyledTextOutput.Style.Normal)?.println(it) }
-                            .substringAfter("data:")
-                            .trim()
-                            .takeIf { it.isNotEmpty() }
-                            ?.let { objectMapper.readValue<ModelGenerationEvent>(it) }
-                            ?.let {
-                                logger?.let { styled ->
-                                    val logLines = it.attachment?.replace("\n", "\nREMOTE LOG:\t\t")
-                                    styled.withStyle(StyledTextOutput.Style.ProgressStatus)
-                                        .println("REMOTE LOG:\t\t$logLines")
+                                .substringAfter("data:")
+                                .trim()
+                                .takeIf { it.isNotEmpty() }
+                                ?.let { objectMapper.readValue<ModelGenerationEvent>(it) }
+                                ?.let {
+                                    logger?.let { styled ->
+                                        val logLines = it.attachment?.replace("\n", "\nREMOTE LOG:\t\t")
+                                        styled.withStyle(StyledTextOutput.Style.ProgressStatus)
+                                            .println("REMOTE LOG:\t\t$logLines")
+                                    }
+                                    events.add(it)
                                 }
-                                events.add(it)
-                            }
-                        strBuffer.delete(0, strBuffer.length)
+                            strBuffer.delete(0, strBuffer.length)
+                        }
                     }
                 }
-            }
 
-            override fun start(response: HttpResponse, contentType: ContentType?) {
-                response.ensureSuccess()
-            }
+                override fun start(response: HttpResponse, contentType: ContentType?) {
+                    response.ensureSuccess()
+                }
 
-            override fun buildResult(): List<ModelGenerationEvent> {
-                return events
-            }
+                override fun buildResult(): List<ModelGenerationEvent> {
+                    return events
+                }
 
+            }
         }
     }
 
@@ -95,7 +97,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
         HttpAsyncClients.createDefault().use { client ->
             client.start()
             val token = AuthenticationService.authentication
-                .accessToken
+                .idToken
             startIOReactor()
             val host = HttpHost("https", "master-experience-api-4qa2c3clla-ew.a.run.app")
 
@@ -112,7 +114,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 )
             val events = client.execute(
                 reqProducer,
-                genEventRespConsumer,
+                genEventRespConsumerFactory(),
                 null
             ).get()
             val id = events.first().generatedFileName
@@ -157,6 +159,12 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
         token: String?,
         client: CloseableHttpAsyncClient
     ) {
+        if (events.isEmpty()) {
+            logger
+                ?.withStyle(StyledTextOutput.Style.Failure)
+                ?.println("Can not determine if remote build has finished or not")
+            return
+        }
         var events1 = events
         while (
             events1.isNotEmpty() &&
@@ -170,7 +178,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
             val requestProducer = BasicRequestProducer(get, null)
             events1 = client.execute(
                 requestProducer,
-                genEventRespConsumer,
+                genEventRespConsumerFactory(),
                 null
             ).get()
         }

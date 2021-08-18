@@ -48,15 +48,25 @@ class AuthenticationService {
         fun fetchJwt(): IdTokenResponse {
             try {
                 val credential: Credential? = flow.loadCredential("user")
-                if (credential != null
-                    && (credential.refreshToken != null || credential.expiresInSeconds == null || credential.expiresInSeconds > 60)
-                ) {
+                credential?.apply {
+                    val response = RefreshTokenRequest(
+                        transport,
+                        jsonFactory,
+                        GenericUrl(tokenServerEncodedUrl),
+                        refreshToken
+                    )
+                        .setClientAuthentication(clientAuthentication)
+                        .setRequestInitializer(requestInitializer)
+                        .execute()
+                    // response doesn't have refresh token!
+//                    response.refreshToken = refreshToken
+//                    flow.createAndStoreCredential(response, "user")
                     return IdTokenResponse()
-                        .setIdToken(credential.accessToken)
-                        .setAccessToken(credential.accessToken)
-                        .setExpiresInSeconds(credential.expiresInSeconds)
-                        .setRefreshToken(credential.refreshToken)
-                        .setTokenType(credential.accessToken)
+                        .setIdToken(response["id_token"] as String)
+                        .setAccessToken(response.accessToken)
+                        .setExpiresInSeconds(response.expiresInSeconds)
+                        .setRefreshToken(response.refreshToken)
+                        .setTokenType(response.accessToken)
                 }
                 // open in browser
                 val redirectUri = receiver.redirectUri
@@ -70,7 +80,6 @@ class AuthenticationService {
                         .newTokenRequest(code)
                         .setRedirectUri(redirectUri)
                 )
-                response.accessToken = response.idToken
                 // store credential and return it
                 flow.createAndStoreCredential(response, "user")
                 return response
