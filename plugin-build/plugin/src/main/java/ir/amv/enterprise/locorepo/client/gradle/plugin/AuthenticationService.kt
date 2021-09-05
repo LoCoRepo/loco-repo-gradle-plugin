@@ -1,6 +1,11 @@
 package ir.amv.enterprise.locorepo.client.gradle.plugin
 
-import com.google.api.client.auth.oauth2.*
+import com.google.api.client.auth.oauth2.AuthorizationCodeFlow
+import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl
+import com.google.api.client.auth.oauth2.BearerToken
+import com.google.api.client.auth.oauth2.ClientParametersAuthentication
+import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.auth.oauth2.RefreshTokenRequest
 import com.google.api.client.auth.openidconnect.IdTokenResponse
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
@@ -8,13 +13,32 @@ import com.google.api.client.http.GenericUrl
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.auth.oauth2.IdTokenProvider
+import java.io.ByteArrayInputStream
 import java.io.File
 
 class AuthenticationService {
     companion object {
-        val authentication: IdTokenResponse by lazy {
-            val DATA_STORE_DIR = File(System.getProperty("user.home"), ".store/amir")
-//            val url = "https://europe-west1-loco-repo-298115.cloudfunctions.net/master-model-generate-http"
+        fun fromServiceAccount(serviceAccount: String): String {
+            val credential = GoogleCredentials.fromStream(ByteArrayInputStream(serviceAccount.toByteArray()))
+            return when (credential) {
+                is IdTokenProvider -> {
+                    credential.idTokenWithAudience(
+                        "609321703527-7uddmgdd8i0src8i8jlnbu593goj2lek.apps.googleusercontent.com",
+                        emptyList()
+                    ).tokenValue
+                }
+                else -> credential.createScoped("https://www.googleapis.com/auth/userinfo.email")
+                    .also {
+                        it.refresh()
+                        it.authenticationType
+                    }.accessToken!!.tokenValue
+            }
+        }
+
+        fun authenticate(): String {
+            val dataDirectory = File(System.getProperty("user.home"), ".store/amir")
             val clientId = "609321703527-7uddmgdd8i0src8i8jlnbu593goj2lek.apps.googleusercontent.com"
             val clientSecret = "SKLEKhc5axjyqVn_EHeZZVNo"
             val authorization = AuthorizationCodeFlow.Builder(
@@ -27,17 +51,16 @@ class AuthenticationService {
                 "https://accounts.google.com/o/oauth2/auth"
             )
                 .setScopes(listOf("https://www.googleapis.com/auth/userinfo.email"))
-                .setDataStoreFactory(FileDataStoreFactory(DATA_STORE_DIR))
+                .setDataStoreFactory(FileDataStoreFactory(dataDirectory))
                 .build()
             // authorize
             val receiver: LocalServerReceiver = LocalServerReceiver.Builder()
                 .setHost("localhost")
                 .setPort(-1)
                 .build()
-
             val jwt = MyAuthApp(authorization, receiver)
                 .fetchJwt()
-            jwt
+            return jwt.idToken
         }
     }
 

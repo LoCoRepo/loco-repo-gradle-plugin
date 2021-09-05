@@ -7,7 +7,12 @@ import org.apache.hc.client5.http.async.methods.AbstractCharResponseConsumer
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients
 import org.apache.hc.client5.http.protocol.HttpClientContext
-import org.apache.hc.core5.http.*
+import org.apache.hc.core5.http.ContentType
+import org.apache.hc.core5.http.HttpConnection
+import org.apache.hc.core5.http.HttpHost
+import org.apache.hc.core5.http.HttpRequest
+import org.apache.hc.core5.http.HttpResponse
+import org.apache.hc.core5.http.Message
 import org.apache.hc.core5.http.impl.Http1StreamListener
 import org.apache.hc.core5.http.impl.bootstrap.AsyncRequesterBootstrap
 import org.apache.hc.core5.http.message.BasicHttpRequest
@@ -29,12 +34,15 @@ import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+private const val MODEL_ID = "e5cb53b0-0c40-49bb-9984-e5442cda2ed3"
+private const val REQUEST_TIME_OUT = 10
 
 class LoCoGeneratorCommand private constructor(builder: Builder) {
 
     private val modelsZip: Path
     private val outputZip: Path
     private val logger: StyledTextOutput?
+    private val serviceAccountJson: String?
     private val objectMapper = jacksonObjectMapper()
     private val genEventRespConsumerFactory: () -> AbstractCharResponseConsumer<List<ModelGenerationEvent>>
 
@@ -42,6 +50,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
         this.modelsZip = builder.modelsZip
         this.outputZip = builder.outputZip
         this.logger = builder.logger
+        this.serviceAccountJson = builder.serviceAccountJson
         genEventRespConsumerFactory = {
             object : AbstractCharResponseConsumer<List<ModelGenerationEvent>>() {
                 val events = mutableListOf<ModelGenerationEvent>()
@@ -58,9 +67,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 override fun data(src: CharBuffer, endOfStream: Boolean) {
                     while (src.hasRemaining()) {
                         strBuffer.append(src.get())
-                        if (strBuffer.indexOf('0') > 0 &&
-                            strBuffer.count { it == '{' } == strBuffer.count { it == '}' }
-                        ) {
+                        if (strBuffer.isEventReady()) {
                             strBuffer
                                 .toString()
 //                            .also { logger?.withStyle(StyledTextOutput.Style.Normal)?.println(it) }
@@ -69,15 +76,19 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                                 .takeIf { it.isNotEmpty() }
                                 ?.let { objectMapper.readValue<ModelGenerationEvent>(it) }
                                 ?.let {
-                                    logger?.let { styled ->
-                                        val logLines = it.attachment?.replace("\n", "\nREMOTE LOG:\t\t")
-                                        styled.withStyle(StyledTextOutput.Style.ProgressStatus)
-                                            .println("REMOTE LOG:\t\t$logLines")
-                                    }
+                                    logEvent(it)
                                     events.add(it)
                                 }
                             strBuffer.delete(0, strBuffer.length)
                         }
+                    }
+                }
+
+                private fun logEvent(it: ModelGenerationEvent) {
+                    logger?.let { styled ->
+                        val logLines = it.attachment?.replace("\n", "\nREMOTE LOG:\t\t")
+                        styled.withStyle(StyledTextOutput.Style.ProgressStatus)
+                            .println("REMOTE LOG:\t\t$logLines")
                     }
                 }
 
@@ -88,23 +99,21 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 override fun buildResult(): List<ModelGenerationEvent> {
                     return events
                 }
-
             }
         }
     }
 
-    fun execute() =
+    fun execute(): Message<HttpResponse, ByteArray> =
         HttpAsyncClients.createDefault().use { client ->
             client.start()
-            val token = AuthenticationService.authentication
-                .idToken
+            val token = acquireToken()
             startIOReactor()
-            val host = HttpHost("https", "master-experience-api-4qa2c3clla-ew.a.run.app")
+            val host = HttpHost("https", "api.locorepo.com")
 
             val request: BasicHttpRequest = BasicRequestBuilder
                 .post().also {
                     it.setHttpHost(host)
-                    it.path = "/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations"
+                    it.path = "/models/$MODEL_ID/generations"
                     it.addHeader("Authorization", "Bearer $token")
                 }.build()
             val reqProducer: AsyncRequestProducer =
@@ -121,7 +130,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
             retryUntilFinishEventReceived(events, id, token, client)
 
             val get: BasicHttpRequest = BasicRequestBuilder
-                .get("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/$id")
+                .get("https://api.locorepo.com/models/$MODEL_ID/generations/$id")
                 .also {
                     it.addHeader("Authorization", "Bearer $token")
                 }.build()
@@ -141,7 +150,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 }
             }
             val delete: BasicHttpRequest = BasicRequestBuilder
-                .delete("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/$id")
+                .delete("https://api.locorepo.com/models/$MODEL_ID/generations/$id")
                 .also {
                     it.addHeader("Authorization", "Bearer $token")
                 }.build()
@@ -152,6 +161,16 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
                 null
             ).get()
         }
+
+    private fun acquireToken() =
+        this.serviceAccountJson
+            ?.let {
+                logger
+                    ?.withStyle(StyledTextOutput.Style.Description)
+                    ?.println("Service Account is used for GCP")
+                AuthenticationService.fromServiceAccount(it)
+            }
+            ?: AuthenticationService.authenticate()
 
     private fun retryUntilFinishEventReceived(
         events: List<ModelGenerationEvent>,
@@ -171,7 +190,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
             !events1.any { it.type == ModelGenerationEvent.ModelGenerationEventType.GENERATION_FINISHED }
         ) {
             val get: BasicHttpRequest = BasicRequestBuilder
-                .get("https://master-experience-api-4qa2c3clla-ew.a.run.app/models/e5cb53b0-0c40-49bb-9984-e5442cda2ed3/generations/logs?generatedFileName=$id")
+                .get("https://api.locorepo.com/models/$MODEL_ID/generations/logs?generatedFileName=$id")
                 .also {
                     it.addHeader("Authorization", "Bearer $token")
                 }.build()
@@ -186,7 +205,7 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
 
     private fun startIOReactor() {
         val ioReactorConfig = IOReactorConfig.custom()
-            .setSoTimeout(10, TimeUnit.MINUTES)
+            .setSoTimeout(REQUEST_TIME_OUT, TimeUnit.MINUTES)
             .build()
         // Create and start requester
         val requester = AsyncRequesterBootstrap.bootstrap()
@@ -227,9 +246,11 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
         lateinit var modelsZip: Path
         lateinit var outputZip: Path
         var logger: StyledTextOutput? = null
+        var serviceAccountJson: String? = null
 
         fun modelsZip(modelsZip: Path) = apply { this.modelsZip = modelsZip }
         fun logger(logger: StyledTextOutput?) = apply { this.logger = logger }
+        fun serviceAccountJson(token: String?) = apply { this.serviceAccountJson = token }
 
         fun build() = LoCoGeneratorCommand(this)
         fun outputFile(outputZip: Path) = apply { this.outputZip = outputZip }
@@ -237,8 +258,12 @@ class LoCoGeneratorCommand private constructor(builder: Builder) {
 }
 
 private fun HttpResponse.ensureSuccess() {
-    if (code < 200 || code >= 300) {
-        throw BuildCancelledException("Unsuccessful http response for Code Generation: $this")
+    val status = StatusLine.StatusClass.from(code)
+    when (status) {
+        StatusLine.StatusClass.SUCCESSFUL -> Unit
+        else -> throw BuildCancelledException("Unsuccessful http response for Code Generation: $this")
     }
 }
 
+private fun StringBuffer.isEventReady() =
+    indexOf('0') > 0 && count { it == '{' } == count { it == '}' }

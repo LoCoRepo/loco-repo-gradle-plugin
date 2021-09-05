@@ -12,9 +12,9 @@ data class ModelGenerationEvent @JsonCreator constructor(
     @JsonProperty("attachment")
     val attachment: String? = null
 ) {
-  enum class ModelGenerationEventType {
-    GENERATION_STARTED,
-    GENERATION_LOG_RECEIVED,
-    GENERATION_FINISHED
-  }
+    enum class ModelGenerationEventType {
+        GENERATION_STARTED,
+        GENERATION_LOG_RECEIVED,
+        GENERATION_FINISHED
+    }
 }

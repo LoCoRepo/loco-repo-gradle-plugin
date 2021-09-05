@@ -5,13 +5,14 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Zip
 
-const val EXTENSION_NAME = "templateExampleConfig"
-const val TASK_NAME = "templateExample"
+const val EXTENSION_NAME = "locoRepoConfig"
+const val TASK_NAME = "locoRepoGenerate"
 
+@Suppress("UnnecessaryAbstractClass")
 abstract class LoCoRepoPlugin : Plugin<Project> {
     override fun apply(project: Project) = with(project) {
-        // Add the 'template' extension object
-        val extension = extensions.create(EXTENSION_NAME, TemplateExtension::class.java, this)
+        // Add the 'locoRepo' extension object
+        val extension = extensions.create(EXTENSION_NAME, LoCoRepoExtension::class.java, this)
 
         // Zip loco models
         val locoRepoDir = layout.buildDirectory.dir("loco-repo")
@@ -29,6 +30,7 @@ abstract class LoCoRepoPlugin : Plugin<Project> {
             genTask.dependsOn(zipTask)
             genTask.outputFile.set(extension.outputFile)
             genTask.modelsZip.set(locoRepoDir.map { it.file("loco-model.zip") })
+            genTask.serviceAccountJson.set(extension.serviceAccountJson)
         }
         tasks.register("generate", Copy::class.java) { copy ->
             copy.dependsOn(gen)

@@ -4,7 +4,8 @@ plugins {
     id("ir.amv.enterprise.locorepo.client.gradle.plugin")
 }
 
-templateExampleConfig {
+locoRepoConfig {
+    serviceAccountJson.set(System.getenv("CI_GCP_SERVICE_ACCOUNT_JSON"))
 }
 
 sourceSets.getByName("main") {

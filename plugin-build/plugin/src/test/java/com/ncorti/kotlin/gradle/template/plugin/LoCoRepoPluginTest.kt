@@ -13,7 +13,7 @@ class LoCoRepoPluginTest {
         val project = ProjectBuilder.builder().build()
         project.pluginManager.apply("ir.amv.enterprise.locorepo.client.gradle.plugin")
 
-        assert(project.tasks.getByName("templateExample") is LoCoRepoGeneratorTask)
+        assert(project.tasks.getByName("locoRepoGenerate") is LoCoRepoGeneratorTask)
     }
 
     @Test
@@ -21,7 +21,7 @@ class LoCoRepoPluginTest {
         val project = ProjectBuilder.builder().build()
         project.pluginManager.apply("ir.amv.enterprise.locorepo.client.gradle.plugin")
 
-        assertNotNull(project.extensions.getByName("templateExampleConfig"))
+        assertNotNull(project.extensions.getByName("locoRepoConfig"))
     }
 
     @Test
@@ -29,11 +29,11 @@ class LoCoRepoPluginTest {
         val project = ProjectBuilder.builder().build()
         project.pluginManager.apply("ir.amv.enterprise.locorepo.client.gradle.plugin")
         val aFile = File(project.projectDir, ".tmp")
-        (project.extensions.getByName("templateExampleConfig") as TemplateExtension).apply {
+        (project.extensions.getByName("locoRepoConfig") as LoCoRepoExtension).apply {
             outputFile.set(aFile)
         }
 
-        val task = project.tasks.getByName("templateExample") as LoCoRepoGeneratorTask
+        val task = project.tasks.getByName("locoRepoGenerate") as LoCoRepoGeneratorTask
 
         assertEquals(aFile, task.outputFile.get().asFile)
     }

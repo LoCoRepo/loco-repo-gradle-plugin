@@ -3,12 +3,13 @@ package ir.amv.enterprise.locorepo.client.gradle.plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import javax.inject.Inject
 
 const val DEFAULT_OUTPUT_FILE = "loco-repo/generated.zip"
 
 @Suppress("UnnecessaryAbstractClass")
-abstract class TemplateExtension @Inject constructor(project: Project) {
+abstract class LoCoRepoExtension @Inject constructor(project: Project) {
 
     private val objects = project.objects
 
@@ -20,4 +21,6 @@ abstract class TemplateExtension @Inject constructor(project: Project) {
     val modelsDir: DirectoryProperty = objects.directoryProperty().convention(
         project.layout.projectDirectory.dir("src/main/mps")
     )
+
+    val serviceAccountJson: Property<String> = objects.property(String::class.java)
 }
