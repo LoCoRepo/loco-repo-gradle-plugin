@@ -9,11 +9,9 @@ dependencies {
     implementation(kotlin("stdlib-jdk7"))
     implementation(gradleApi())
     implementation("org.apache.httpcomponents.client5:httpclient5:5.1")
-    implementation("com.auth0:java-jwt:3.18.1")
     implementation("com.google.auth:google-auth-library-oauth2-http:0.25.5")
     implementation("com.google.oauth-client:google-oauth-client:1.31.5")
     implementation("com.google.oauth-client:google-oauth-client-jetty:1.31.5")
-    implementation("com.google.cloud:google-cloud-storage")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.12.3")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.3")
 
