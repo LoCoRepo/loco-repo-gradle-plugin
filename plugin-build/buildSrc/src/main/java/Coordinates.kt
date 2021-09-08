@@ -6,15 +6,17 @@ object PluginCoordinates {
 }
 
 object PluginBundle {
-    const val VCS = "https://github.com/amirmv2006/kotlin-gradle-plugin-sandbox"
-    const val WEBSITE = "https://github.com/cortinico/kotlin-gradle-plugin-template"
-    const val DESCRIPTION = "An empty Gradle plugin created from a template"
-    const val DISPLAY_NAME = "An empty Gradle Plugin from a template"
+    const val VCS = "https://github.com/LoCoRepo/loco-repo-gradle-plugin"
+    const val WEBSITE = "https://github.com/LoCoRepo/loco-repo-gradle-plugin"
+    const val DESCRIPTION = "A gradle plugin used for generating LoCoRepo languages"
+    const val DISPLAY_NAME = "LoCoRepo Gradle Plugin"
     val TAGS = listOf(
         "plugin",
         "gradle",
-        "sample",
-        "template"
+        "locorepo",
+        "language",
+        "code-generator",
+        "generator"
     )
 }
 
