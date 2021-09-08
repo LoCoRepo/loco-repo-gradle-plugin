@@ -6,6 +6,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = ("ir.amv.enterprise.locorepo.client.gradle")
+rootProject.name = ("com.locorepo.client.gradle")
 
 include(":plugin")

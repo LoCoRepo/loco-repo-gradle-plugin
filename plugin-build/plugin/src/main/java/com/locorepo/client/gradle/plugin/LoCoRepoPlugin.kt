@@ -1,4 +1,4 @@
-package ir.amv.enterprise.locorepo.client.gradle.plugin
+package com.locorepo.client.gradle.plugin
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project

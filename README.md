@@ -12,7 +12,7 @@ Just click on [![Use this template](https://img.shields.io/badge/-Use%20this%20t
 
 Once created don't forget to update the:
 - [Plugin Coordinates](plugin-build/buildSrc/src/main/java/Coordinates.kt)
-- Plugin Usages (search for [ir.amv.enterprise.locorepo.client.gradle](https://github.com/cortinico/kotlin-gradle-plugin-template/search?q=ir.amv.enterprise.locorepo.client.gradle&unscoped_q=ir.amv.enterprise.locorepo.client.gradle) in the repo and replace it with your ID).
+- Plugin Usages (search for [com.locorepo.client.gradle.plugin](https://github.com/cortinico/kotlin-gradle-plugin-template/search?q=ir.amv.enterprise.locorepo.client.gradle&unscoped_q=com.locorepo.client.gradle.plugin) in the repo and replace it with your ID).
 
 ## Features 🎨
 

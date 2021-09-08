@@ -1,7 +1,7 @@
 plugins {
     java
     idea
-    id("ir.amv.enterprise.locorepo.client.gradle.plugin")
+    id("com.locorepo.client.gradle.plugin")
 }
 
 locoRepoConfig {

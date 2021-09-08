@@ -1,6 +1,6 @@
-package ir.amv.enterprise.locorepo.client.gradle.plugin
+package com.locorepo.client.gradle.plugin
 
-import ir.amv.enterprise.locorepo.client.gradle.common.LoCoGeneratorCommand
+import com.locorepo.client.gradle.common.LoCoGeneratorCommand
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.plugins.BasePlugin

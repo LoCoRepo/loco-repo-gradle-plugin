@@ -1,4 +1,4 @@
-package ir.amv.enterprise.locorepo.client.gradle.common
+package com.locorepo.client.gradle.common
 
 import org.gradle.internal.impldep.com.fasterxml.jackson.annotation.JsonCreator
 import org.gradle.internal.impldep.com.fasterxml.jackson.annotation.JsonProperty

@@ -1,8 +1,8 @@
-package ir.amv.enterprise.locorepo.client.gradle.common
+package com.locorepo.client.gradle.common
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import ir.amv.enterprise.locorepo.client.gradle.plugin.AuthenticationService
+import com.locorepo.client.gradle.plugin.AuthenticationService
 import org.apache.hc.client5.http.async.methods.AbstractCharResponseConsumer
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients

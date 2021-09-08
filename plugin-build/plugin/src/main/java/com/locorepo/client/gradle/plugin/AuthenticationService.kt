@@ -1,4 +1,4 @@
-package ir.amv.enterprise.locorepo.client.gradle.plugin
+package com.locorepo.client.gradle.plugin
 
 import com.google.api.client.auth.oauth2.AuthorizationCodeFlow
 import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl
