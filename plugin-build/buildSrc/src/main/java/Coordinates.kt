@@ -1,7 +1,7 @@
 object PluginCoordinates {
     const val ID = "com.locorepo.client.gradle.plugin"
     const val GROUP = "com.locorepo.client.gradle"
-    const val VERSION = "1.0.1"
+    const val VERSION = "0.0.4"
     const val IMPLEMENTATION_CLASS = "com.locorepo.client.gradle.plugin.LoCoRepoPlugin"
 }
 
